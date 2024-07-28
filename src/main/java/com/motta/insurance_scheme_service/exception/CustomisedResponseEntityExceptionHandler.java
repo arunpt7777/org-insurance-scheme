@@ -29,6 +29,7 @@ public class CustomisedResponseEntityExceptionHandler extends ResponseEntityExce
 		return new ResponseEntity(errorDetails, HttpStatus.NOT_FOUND);
 	}
 
+
 	@Override
 	protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
 			HttpHeaders headers, HttpStatusCode status, WebRequest request) {
@@ -40,4 +41,13 @@ public class CustomisedResponseEntityExceptionHandler extends ResponseEntityExce
 		return new ResponseEntity(errorDetails, HttpStatus.BAD_REQUEST);
 
 	}
+
+	@ExceptionHandler(InvalidDateRangeException.class)
+	public final ResponseEntity<ErrorDetails> handleInvalidDateRangeException(Exception ex, WebRequest request)
+			throws Exception {
+		ErrorDetails errorDetails = new ErrorDetails(LocalDateTime.now(), ex.getMessage(),
+				request.getDescription(false));
+		return new ResponseEntity(errorDetails, HttpStatus.NOT_FOUND);
+	}
+
 }

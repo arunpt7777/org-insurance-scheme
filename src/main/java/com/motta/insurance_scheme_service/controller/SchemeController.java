@@ -75,5 +75,8 @@ public class SchemeController {
 		return new ResponseEntity<>(schemesByType, HttpStatus.OK);
 	}
 
+	// Retrieve all all valid schemes as of today for an employee Id and get maximum eligible amount
+
+
 
 }
