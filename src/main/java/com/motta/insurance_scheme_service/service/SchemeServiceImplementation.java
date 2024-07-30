@@ -69,11 +69,14 @@ public class SchemeServiceImplementation implements SchemeService {
 		validate(schemeDTO);
 
 		Scheme existingScheme = repository.findById(schemeDTO.getId()).get();
-        existingScheme.setSchemeAmount(schemeDTO.getSchemeAmount());
+		existingScheme.setSchemeAmount(schemeDTO.getSchemeAmount());
 		existingScheme.setSchemeType(schemeDTO.getSchemeType());
 		existingScheme.setName(schemeDTO.getName());
 		existingScheme.setValidFromDate(schemeDTO.getValidFromDate());
 		existingScheme.setValidToDate(schemeDTO.getValidToDate());
+		existingScheme.setShare(schemeDTO.getShare());
+		existingScheme.setCommission(schemeDTO.getCommission());
+		existingScheme.setBrokerage(schemeDTO.getBrokerage());
 
 		Scheme updatedScheme = repository.save(existingScheme);
 		return SchemeMapper.mapToSchemeDTO(updatedScheme);

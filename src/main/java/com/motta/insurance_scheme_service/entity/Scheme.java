@@ -32,16 +32,28 @@ public class Scheme {
 	@NotEmpty(message = "Scheme Type must not be empty")
 	private String schemeType;
 
+	@Size(min = 1, message = "Share must not be empty")
+	private Double share;
+
+	@Size(min = 1, message = "Commission Amount must not be empty")
+	private Double commission;
+
+	@Size(min = 1, message = "Brokerage Amount must not be empty")
+	private Double brokerage;
+
 	public Scheme() {
 	}
 
-	public Scheme(Integer id, String name, Date validFromDate, Date validToDate, Double schemeAmount, String schemeType) {
+	public Scheme(Integer id, String name, Date validFromDate, Date validToDate, Double schemeAmount, String schemeType, Double share, Double commission, Double brokerage) {
 		this.id = id;
 		this.name = name;
 		this.validFromDate = validFromDate;
 		this.validToDate = validToDate;
 		this.schemeAmount = schemeAmount;
 		this.schemeType = schemeType;
+		this.share = share;
+		this.commission = commission;
+		this.brokerage = brokerage;
 	}
 
 	public Integer getId() {
@@ -92,6 +104,43 @@ public class Scheme {
 		this.schemeType = schemeType;
 	}
 
+	public Double getShare() {
+		return share;
+	}
+
+	public void setShare(Double share) {
+		this.share = share;
+	}
+
+	public Double getCommission() {
+		return commission;
+	}
+
+	public void setCommission(Double commission) {
+		this.commission = commission;
+	}
+
+	public Double getBrokerage() {
+		return brokerage;
+	}
+
+	public void setBrokerage(Double brokerage) {
+		this.brokerage = brokerage;
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		Scheme scheme = (Scheme) o;
+		return Objects.equals(id, scheme.id) && Objects.equals(name, scheme.name) && Objects.equals(validFromDate, scheme.validFromDate) && Objects.equals(validToDate, scheme.validToDate) && Objects.equals(schemeAmount, scheme.schemeAmount) && Objects.equals(schemeType, scheme.schemeType) && Objects.equals(share, scheme.share) && Objects.equals(commission, scheme.commission) && Objects.equals(brokerage, scheme.brokerage);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(id, name, validFromDate, validToDate, schemeAmount, schemeType, share, commission, brokerage);
+	}
+
 	@Override
 	public String toString() {
 		return "Scheme{" +
@@ -101,19 +150,9 @@ public class Scheme {
 				", validToDate=" + validToDate +
 				", schemeAmount=" + schemeAmount +
 				", schemeType='" + schemeType + '\'' +
+				", share=" + share +
+				", commission=" + commission +
+				", brokerage=" + brokerage +
 				'}';
-	}
-
-	@Override
-	public boolean equals(Object o) {
-		if (this == o) return true;
-		if (o == null || getClass() != o.getClass()) return false;
-		Scheme scheme = (Scheme) o;
-		return Objects.equals(id, scheme.id) && Objects.equals(name, scheme.name) && Objects.equals(validFromDate, scheme.validFromDate) && Objects.equals(validToDate, scheme.validToDate) && Objects.equals(schemeAmount, scheme.schemeAmount) && Objects.equals(schemeType, scheme.schemeType);
-	}
-
-	@Override
-	public int hashCode() {
-		return Objects.hash(id, name, validFromDate, validToDate, schemeAmount, schemeType);
 	}
 }
