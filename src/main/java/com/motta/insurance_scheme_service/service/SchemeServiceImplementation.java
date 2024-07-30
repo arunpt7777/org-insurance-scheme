@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import com.motta.insurance_scheme_service.exception.InvalidDateRangeException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -25,8 +26,16 @@ public class SchemeServiceImplementation implements SchemeService {
 	@Autowired
 	private SchemeRepository repository;
 
+	// Method to check if SchemeDTO is valid
+	public void validate(SchemeDTO schemeDTO) throws InvalidDateRangeException {
+		if (schemeDTO.getValidFromDate().after(schemeDTO.getValidToDate())) throw new InvalidDateRangeException("From Date should be less than To Date");
+	}
+
 	@Override
 	public SchemeDTO createScheme(SchemeDTO schemeDTO) {
+
+		// Check if From and To Dates are valid
+		validate(schemeDTO);
 
 		// CHeck if id already exists
 		Optional<Scheme> scheme = repository.findById(schemeDTO.getId());
@@ -56,13 +65,18 @@ public class SchemeServiceImplementation implements SchemeService {
 
 	@Override
 	public SchemeDTO updateScheme(SchemeDTO schemeDTO) {
-		Scheme existingScheme = repository.findById(schemeDTO.getId()).get();
+		// Check if From and To Dates are valid
+		validate(schemeDTO);
 
-        existingScheme.setSchemeAmount(schemeDTO.getSchemeAmount());
+		Scheme existingScheme = repository.findById(schemeDTO.getId()).get();
+		existingScheme.setSchemeAmount(schemeDTO.getSchemeAmount());
 		existingScheme.setSchemeType(schemeDTO.getSchemeType());
 		existingScheme.setName(schemeDTO.getName());
 		existingScheme.setValidFromDate(schemeDTO.getValidFromDate());
 		existingScheme.setValidToDate(schemeDTO.getValidToDate());
+		existingScheme.setShare(schemeDTO.getShare());
+		existingScheme.setCommission(schemeDTO.getCommission());
+		existingScheme.setBrokerage(schemeDTO.getBrokerage());
 
 		Scheme updatedScheme = repository.save(existingScheme);
 		return SchemeMapper.mapToSchemeDTO(updatedScheme);
