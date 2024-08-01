@@ -18,4 +18,6 @@ public interface SchemeService {
 
 	List<SchemeDTO> retrieveAllSchemesByType(String schemeType);
 
+	void validateSchemeTO(SchemeDTO schemeDTO);
+
 }

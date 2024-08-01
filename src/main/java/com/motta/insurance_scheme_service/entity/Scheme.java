@@ -1,44 +1,34 @@
 package com.motta.insurance_scheme_service.entity;
 
-import javax.validation.constraints.Size;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotEmpty;
+import org.hibernate.annotations.Type;
 
 import java.util.Date;
 import java.util.Objects;
 
 @Entity
 @Table(name = "insurance_scheme")
-@SequenceGenerator(name = "Custom_Sequence", sequenceName = "custom_sequence", initialValue = 4, allocationSize = 1)
+@SequenceGenerator(name = "Custom_Sequence", sequenceName = "custom_sequence", initialValue = 100, allocationSize = 1)
 public class Scheme {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "Custom_Sequence")
 	private Integer id;
 
-	@NotEmpty(message = "Scheme Name must not be empty")
-	private String name;
-
 	@Column(name = "valid_from_date", nullable = false, updatable = false, insertable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+	@Temporal(TemporalType.DATE)
 	private Date validFromDate;
 
 	@Column(name = "valid_to_date", nullable = false, updatable = false, insertable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+	@Temporal(TemporalType.DATE)
 	private Date validToDate;
 
-	@Size(min = 1, message = "Scheme Amount must not be empty")
+	private String name;
 	private Double schemeAmount;
-
-	@NotEmpty(message = "Scheme Type must not be empty")
 	private String schemeType;
-
-	@Size(min = 1, message = "Share must not be empty")
 	private Double share;
-
-	@Size(min = 1, message = "Commission Amount must not be empty")
 	private Double commission;
-
-	@Size(min = 1, message = "Brokerage Amount must not be empty")
 	private Double brokerage;
 
 	public Scheme() {
@@ -64,14 +54,6 @@ public class Scheme {
 		this.id = id;
 	}
 
-	public @NotEmpty(message = "Scheme Name must not be empty") String getName() {
-		return name;
-	}
-
-	public void setName(@NotEmpty(message = "Scheme Name must not be empty") String name) {
-		this.name = name;
-	}
-
 	public Date getValidFromDate() {
 		return validFromDate;
 	}
@@ -88,6 +70,14 @@ public class Scheme {
 		this.validToDate = validToDate;
 	}
 
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
 	public Double getSchemeAmount() {
 		return schemeAmount;
 	}
@@ -96,11 +86,11 @@ public class Scheme {
 		this.schemeAmount = schemeAmount;
 	}
 
-	public @NotEmpty(message = "Scheme Type must not be empty") String getSchemeType() {
+	public String getSchemeType() {
 		return schemeType;
 	}
 
-	public void setSchemeType(@NotEmpty(message = "Scheme Type must not be empty") String schemeType) {
+	public void setSchemeType(String schemeType) {
 		this.schemeType = schemeType;
 	}
 
