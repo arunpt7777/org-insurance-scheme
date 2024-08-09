@@ -75,8 +75,18 @@ public class SchemeController {
 		return new ResponseEntity<>(schemesByType, HttpStatus.OK);
 	}
 
-	// Retrieve all all valid schemes as of today for an employee Id and get maximum eligible amount
+	// Retrieve total commission of a schemeIf for an Employee Id
+	@GetMapping("/getcommissionforschemeid/{schemeId}")
+	public ResponseEntity<Double> retrieveCommissionForScheme(@PathVariable("schemeId") Integer schemeId) {
+		Double totalAmount = schemeService.calculateCommission(schemeId);
+		return new ResponseEntity<>(totalAmount, HttpStatus.OK);
+	}
 
-
+	// Retrieve total share of a schemeIf for an Employee Id
+	@GetMapping("/getshareforschemeid/{schemeId}")
+	public ResponseEntity<Double> retrieveShareForScheme(@PathVariable("schemeId") Integer schemeId) {
+		Double totalAmount = schemeService.calculateShare(schemeId);
+		return new ResponseEntity<>(totalAmount, HttpStatus.OK);
+	}
 
 }

@@ -20,4 +20,7 @@ public interface SchemeService {
 
 	void validateSchemeTO(SchemeDTO schemeDTO);
 
+	Double calculateCommission(Integer schemeId);
+
+	Double calculateShare(Integer schemeId);
 }

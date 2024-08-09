@@ -1,28 +1,32 @@
 package com.motta.insurance_scheme_service.service;
 
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 import com.motta.insurance_scheme_service.exception.InvalidDateRangeException;
 import com.motta.insurance_scheme_service.exception.InvalidSchemeException;
+import com.motta.insurance_scheme_service.model.AssociationDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import com.motta.insurance_scheme_service.entity.Scheme;
 import com.motta.insurance_scheme_service.exception.SchemeAlreadyExistsException;
-import com.motta.insurance_scheme_service.exception.SchemeNotFoundException;
 import com.motta.insurance_scheme_service.mapper.SchemeMapper;
 import com.motta.insurance_scheme_service.model.SchemeDTO;
 import com.motta.insurance_scheme_service.repository.SchemeRepository;
 
 import jakarta.transaction.Transactional;
+import org.springframework.web.client.RestTemplate;
 
 @Service
 @Transactional
@@ -31,8 +35,8 @@ public class SchemeServiceImplementation implements SchemeService {
 
 	private static final Logger log = LoggerFactory.getLogger(SchemeServiceImplementation.class);
 
-	@Value("${scheme.id.initalValue}")
-	private Integer initalValueOfPrimaryKey;
+	@Value("${scheme.id.initialValue}")
+	private Integer initialValueOfPrimaryKey;
 
 	@Autowired
 	private SchemeRepository repository;
@@ -119,8 +123,8 @@ public class SchemeServiceImplementation implements SchemeService {
 			throw new InvalidSchemeException("Scheme Name is mandatory");
 		}
 
-		if (schemeDTO.getId()<initalValueOfPrimaryKey) {
-			throw new InvalidSchemeException("Scheme Id must not be less than the initial value of: " + initalValueOfPrimaryKey);
+		if (schemeDTO.getId()< initialValueOfPrimaryKey) {
+			throw new InvalidSchemeException("Scheme Id must not be less than the initial value of: " + initialValueOfPrimaryKey);
 		}
 		if (schemeDTO.getValidFromDate()==null) {
 			throw new InvalidSchemeException("Valid From Date is mandatory");
@@ -143,5 +147,71 @@ public class SchemeServiceImplementation implements SchemeService {
 			throw new InvalidSchemeException("Commission  is mandatory");
 		}
 	}
+
+
+	@Override
+	public Double calculateCommission(Integer schemeId) {
+		Double totalCommission = 0.0;
+
+		SchemeDTO schemeDTO = retrieveSchemeById(schemeId);
+		if(schemeDTO == null) {
+			throw new InvalidSchemeException("Scheme Id not found");
+		}
+
+		// Get all associations for a scheme id
+		RestTemplate restTemplate = new RestTemplate();
+
+		ResponseEntity<AssociationDTO[]> response =
+				restTemplate.getForEntity("http://localhost:8900/getassociationsbyschemeid/{schemeId}",
+						AssociationDTO[].class, schemeId);
+		AssociationDTO[] associationDTOS = response.getBody();
+
+		if (associationDTOS == null) {
+			log.error("Fetching associations for scheme Id = {} has failed.", schemeDTO.getId());
+			throw new InvalidSchemeException("Associations not found");
+		}
+		for (AssociationDTO associationDTO: associationDTOS) {
+			SchemeDTO associatedSchemeDTO = retrieveSchemeById(associationDTO.getSchemeId());
+			if(associatedSchemeDTO == null) {
+				throw new InvalidSchemeException("Scheme Id not found");
+			}
+			if(totalCommission<associatedSchemeDTO.getCommission()) totalCommission = associatedSchemeDTO.getCommission();
+		}
+
+return  totalCommission;
+	}
+
+	@Override
+	public Double calculateShare(Integer schemeId) {
+		Double totalShare = 0.0;
+
+		SchemeDTO schemeDTO = retrieveSchemeById(schemeId);
+		if(schemeDTO == null) {
+			throw new InvalidSchemeException("Scheme Id not found");
+		}
+
+		// Get all associations for a scheme id
+		RestTemplate restTemplate = new RestTemplate();
+
+		ResponseEntity<AssociationDTO[]> response =
+				restTemplate.getForEntity("http://localhost:8900/getassociationsbyschemeid/{schemeId}",
+						AssociationDTO[].class, schemeId);
+		AssociationDTO[] associationDTOS = response.getBody();
+
+		if (associationDTOS == null) {
+			log.error("Fetching associations for scheme Id = {} has failed.", schemeDTO.getId());
+			throw new InvalidSchemeException("Associations not found");
+		}
+		for (AssociationDTO associationDTO: associationDTOS) {
+			SchemeDTO associatedSchemeDTO = retrieveSchemeById(associationDTO.getSchemeId());
+			if(associatedSchemeDTO == null) {
+				throw new InvalidSchemeException("Scheme Id not found");
+			}
+			if(totalShare >= associatedSchemeDTO.getShare()) totalShare = associatedSchemeDTO.getShare();
+		}
+
+		return  totalShare;
+	}
+
 
 }
