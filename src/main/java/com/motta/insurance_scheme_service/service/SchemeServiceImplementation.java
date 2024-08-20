@@ -1,20 +1,22 @@
 package com.motta.insurance_scheme_service.service;
 
 import java.util.ArrayList;
-import java.util.Date;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static com.motta.insurance_scheme_service.util.SchemeConstants.*;
 import com.motta.insurance_scheme_service.exception.InvalidDateRangeException;
 import com.motta.insurance_scheme_service.exception.InvalidSchemeException;
 import com.motta.insurance_scheme_service.model.AssociationDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -29,11 +31,16 @@ import jakarta.transaction.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 @Service
-@Transactional
 @Slf4j
 public class SchemeServiceImplementation implements SchemeService {
 
-	private static final Logger log = LoggerFactory.getLogger(SchemeServiceImplementation.class);
+	private static final Logger logger = LoggerFactory.getLogger(SchemeServiceImplementation.class);
+
+	@Autowired
+	private RestTemplate restTemplate;
+
+	@Autowired
+	private SchemeMapper schemeMapper;
 
 	@Value("${scheme.id.initialValue}")
 	private Integer initialValueOfPrimaryKey;
@@ -41,6 +48,7 @@ public class SchemeServiceImplementation implements SchemeService {
 	@Autowired
 	private SchemeRepository repository;
 
+	@Transactional
 	@Override
 	public SchemeDTO createScheme(SchemeDTO schemeDTO) {
 
@@ -48,53 +56,51 @@ public class SchemeServiceImplementation implements SchemeService {
 		validateSchemeTO(schemeDTO);
 
 		// CHeck if id already exists
-		Optional<Scheme> scheme = repository.findById(schemeDTO.getId());
-		log.error("Scheme id = {} not found. Please enter different id", schemeDTO.getId());
-		if (scheme.isPresent()) {
-			throw new SchemeAlreadyExistsException("Scheme id = " + schemeDTO.getId() + " already Exists!");
+		Scheme scheme = repository.findById(schemeDTO.getId()).orElse(null);
+		if (scheme == null) {
+			throw new SchemeAlreadyExistsException(EXCEPTION_MESSAGE_SCHEME_NOT_FOUND);
 		}
 
 		// Convert SchemeDTO into User JPA Entity
-		Scheme newScheme = SchemeMapper.mapToScheme(schemeDTO);
+		Scheme newScheme = new Scheme();
+		BeanUtils.copyProperties(schemeDTO, newScheme);
 		Scheme savedScheme = repository.save(newScheme);
-		log.info("Scheme id = {} persisted", schemeDTO.getId());
+		logger.info(LOG_MESSAGE_SCHEME_PERSISTED, schemeDTO.getId());
 
 		// Convert Scheme JPA entity to SchemeDTO
-        return SchemeMapper.mapToSchemeDTO(savedScheme);
+        return schemeMapper.mapToSchemeDTO(savedScheme);
 	}
 
 	@Override
 	public SchemeDTO retrieveSchemeById(Integer id) {
-		Scheme scheme = repository.findById(id).get();
-        return SchemeMapper.mapToSchemeDTO(scheme);
+		Scheme scheme = repository.findById(id).orElse(null);
+        assert scheme != null;
+		SchemeDTO schemeDTO = new SchemeDTO();
+		BeanUtils.copyProperties(scheme, schemeDTO);
+        return schemeDTO;
 	}
 
 	@Override
 	public List<SchemeDTO> retrieveAllSchemes() {
 		List<Scheme> schemes = repository.findAll();
-		return schemes.stream().map(SchemeMapper::mapToSchemeDTO).collect(Collectors.toList());
+		return schemes.stream().map(schemeMapper::mapToSchemeDTO).toList();
+
 	}
 
+	@Transactional
 	@Override
 	public SchemeDTO updateScheme(SchemeDTO schemeDTO) {
 		// Check if From and To Dates are valid
 		validateSchemeTO(schemeDTO);
 
-		Scheme existingScheme = repository.findById(schemeDTO.getId()).orElse(new Scheme(schemeDTO.getId(), schemeDTO.getName(), schemeDTO.getValidFromDate(), schemeDTO.getValidToDate(), schemeDTO.getSchemeAmount(), schemeDTO.getSchemeType(), schemeDTO.getShare(), schemeDTO.getCommission(), schemeDTO.getBrokerage() ));
-		existingScheme.setSchemeAmount(schemeDTO.getSchemeAmount());
-		existingScheme.setSchemeType(schemeDTO.getSchemeType());
-		existingScheme.setName(schemeDTO.getName());
-		existingScheme.setValidFromDate(schemeDTO.getValidFromDate());
-		existingScheme.setValidToDate(schemeDTO.getValidToDate());
-		existingScheme.setShare(schemeDTO.getShare());
-		existingScheme.setCommission(schemeDTO.getCommission());
-		existingScheme.setBrokerage(schemeDTO.getBrokerage());
-
+		Scheme existingScheme = repository.findById(schemeDTO.getId()).orElse(new Scheme());
+		BeanUtils.copyProperties(existingScheme, schemeDTO);
 		Scheme updatedScheme = repository.save(existingScheme);
-		log.error("Updating scheme id = {} has failed.", existingScheme.getId());
-		return SchemeMapper.mapToSchemeDTO(updatedScheme);
+		logger.error(LOG_MESSAGE_SCHEME_UPDATE_FAILED, existingScheme.getId());
+		return schemeMapper.mapToSchemeDTO(updatedScheme);
 	}
 
+	@Transactional
 	@Override
 	public void deleteScheme(Integer id) {
 		repository.deleteById(id);
@@ -104,7 +110,7 @@ public class SchemeServiceImplementation implements SchemeService {
 	public List<SchemeDTO> retrieveAllSchemesByType(String schemeType) {
 		List<Scheme> schemes = repository.findAll();
 		return schemes.stream().filter(scheme -> scheme.getSchemeType().equalsIgnoreCase(schemeType))
-				.map(SchemeMapper::mapToSchemeDTO).collect(Collectors.toList());
+				.map(schemeMapper::mapToSchemeDTO).toList();
 	}
 
 	// Method to check if SchemeDTO is valid
@@ -112,106 +118,94 @@ public class SchemeServiceImplementation implements SchemeService {
 	public void validateSchemeTO(SchemeDTO schemeDTO) {
 
 		if (schemeDTO.getValidFromDate().after(schemeDTO.getValidToDate())) {
-			throw new InvalidDateRangeException("From Date should be less than To Date");
+			throw new InvalidDateRangeException(EXCEPTION_MESSAGE_INVALID_FROM_DATE);
 		}
 
-		if (schemeDTO.getId()==null) {
-			throw new InvalidSchemeException("Scheme Id is mandatory");
+		if (schemeDTO.getId() == 0) {
+			throw new InvalidSchemeException(EXCEPTION_MESSAGE_SCHEME_ID_IS_MANDATORY);
 		}
 
 		if (schemeDTO.getName()==null) {
-			throw new InvalidSchemeException("Scheme Name is mandatory");
+			throw new InvalidSchemeException(EXCEPTION_MESSAGE_SCHEME_NAME_IS_MANDATORY);
 		}
 
 		if (schemeDTO.getId()< initialValueOfPrimaryKey) {
-			throw new InvalidSchemeException("Scheme Id must not be less than the initial value of: " + initialValueOfPrimaryKey);
-		}
-		if (schemeDTO.getValidFromDate()==null) {
-			throw new InvalidSchemeException("Valid From Date is mandatory");
+			throw new InvalidSchemeException(EXCEPTION_MESSAGE_SCHEME_ID_LESS_THAN_INITIAL_VALUE +  initialValueOfPrimaryKey);
 		}
 
 		if (schemeDTO.getValidToDate()==null) {
-			throw new InvalidSchemeException("Valid To Date is mandatory");
+			throw new InvalidSchemeException(EXCEPTION_MESSAGE_TO_DATE_IS_MANDATORY);
 		}
 		if (schemeDTO.getSchemeType()==null) {
-			throw new InvalidSchemeException("Scheme Type is mandatory");
+			throw new InvalidSchemeException(EXCEPTION_MESSAGE_SCHEME_TYPE_IS_MANDATORY);
 		}
-		if (schemeDTO.getSchemeAmount()==null) {
-			throw new InvalidSchemeException("Scheme Amount is mandatory");
+		if (schemeDTO.getSchemeAmount()==0.0) {
+			throw new InvalidSchemeException(EXCEPTION_MESSAGE_SCHEME_AMOUNT_IS_MANDATORY);
 		}
 
-		if (schemeDTO.getShare()==null) {
-			throw new InvalidSchemeException("Share is mandatory");
+		if (schemeDTO.getShare() == 0.0) {
+			throw new InvalidSchemeException(EXCEPTION_MESSAGE_SHARE_IS_MANDATORY);
 		}
-		if (schemeDTO.getCommission()==null) {
-			throw new InvalidSchemeException("Commission  is mandatory");
+		if (schemeDTO.getCommission() == 0.0) {
+			throw new InvalidSchemeException(EXCEPTION_MESSAGE_COMMISSION_IS_MANDATORY);
 		}
+	}
+
+	public List<AssociationDTO> fetchAssociations (int schemeId) {
+		HttpHeaders headers = new HttpHeaders();
+		HttpEntity<String> entity = new HttpEntity<String>(headers);
+
+		// Check if scheme exists or not
+		SchemeDTO schemeDTO = retrieveSchemeById(schemeId);
+		if(schemeDTO == null) {
+			throw new InvalidSchemeException(EXCEPTION_MESSAGE_SCHEME_NOT_FOUND);
+		}
+
+		// Get all associations for the scheme id
+		ResponseEntity<AssociationDTO[]> response = restTemplate.exchange(URL_GET_ASSOCIATIONS_BY_SCHEME_ID + schemeId, HttpMethod.GET, entity, AssociationDTO[].class);
+		AssociationDTO[] associationDTOS = response.getBody();
+
+		if (associationDTOS == null) {
+			throw new InvalidSchemeException("Associations not found");
+		}
+		return  Arrays.stream(associationDTOS).toList();
 	}
 
 
 	@Override
-	public Double calculateCommission(Integer schemeId) {
-		Double totalCommission = 0.0;
+	public double calculateCommission(Integer schemeId) {
+		double totalCommission = 0.0;
 
-		SchemeDTO schemeDTO = retrieveSchemeById(schemeId);
-		if(schemeDTO == null) {
-			throw new InvalidSchemeException("Scheme Id not found");
-		}
+		List<AssociationDTO> associationDTOS = fetchAssociations(schemeId);
+		List<Double> commissionList = new ArrayList<>();
 
-		// Get all associations for a scheme id
-		RestTemplate restTemplate = new RestTemplate();
-
-		ResponseEntity<AssociationDTO[]> response =
-				restTemplate.getForEntity("http://localhost:8900/getassociationsbyschemeid/{schemeId}",
-						AssociationDTO[].class, schemeId);
-		AssociationDTO[] associationDTOS = response.getBody();
-
-		if (associationDTOS == null) {
-			log.error("Fetching associations for scheme Id = {} has failed.", schemeDTO.getId());
-			throw new InvalidSchemeException("Associations not found");
-		}
 		for (AssociationDTO associationDTO: associationDTOS) {
 			SchemeDTO associatedSchemeDTO = retrieveSchemeById(associationDTO.getSchemeId());
 			if(associatedSchemeDTO == null) {
-				throw new InvalidSchemeException("Scheme Id not found");
+				throw new InvalidSchemeException(EXCEPTION_MESSAGE_SCHEME_NOT_FOUND + associationDTO.getSchemeId());
 			}
-			if(totalCommission<associatedSchemeDTO.getCommission()) totalCommission = associatedSchemeDTO.getCommission();
+			commissionList.add(associatedSchemeDTO.getCommission());
 		}
-
-return  totalCommission;
+		totalCommission = commissionList.stream().max(Double::compare).orElse(0.0);
+		return totalCommission;
 	}
 
 	@Override
-	public Double calculateShare(Integer schemeId) {
-		Double totalShare = 0.0;
+	public double calculateShare(Integer schemeId) {
+		double totalShare = 0.0;
 
-		SchemeDTO schemeDTO = retrieveSchemeById(schemeId);
-		if(schemeDTO == null) {
-			throw new InvalidSchemeException("Scheme Id not found");
-		}
 
-		// Get all associations for a scheme id
-		RestTemplate restTemplate = new RestTemplate();
+		List<AssociationDTO> associationDTOS = fetchAssociations(schemeId);
+		List<Double> shareList = new ArrayList<>();
 
-		ResponseEntity<AssociationDTO[]> response =
-				restTemplate.getForEntity("http://localhost:8900/getassociationsbyschemeid/{schemeId}",
-						AssociationDTO[].class, schemeId);
-		AssociationDTO[] associationDTOS = response.getBody();
-
-		if (associationDTOS == null) {
-			log.error("Fetching associations for scheme Id = {} has failed.", schemeDTO.getId());
-			throw new InvalidSchemeException("Associations not found");
-		}
 		for (AssociationDTO associationDTO: associationDTOS) {
 			SchemeDTO associatedSchemeDTO = retrieveSchemeById(associationDTO.getSchemeId());
 			if(associatedSchemeDTO == null) {
-				throw new InvalidSchemeException("Scheme Id not found");
+				throw new InvalidSchemeException(EXCEPTION_MESSAGE_SCHEME_NOT_FOUND + associationDTO.getSchemeId());
 			}
-			if(totalShare >= associatedSchemeDTO.getShare()) totalShare = associatedSchemeDTO.getShare();
+			shareList.add(associatedSchemeDTO.getShare());
 		}
-
+		totalShare = shareList.stream().min(Double::compare).orElse(0.0);
 		return  totalShare;
 	}
-
-
 }
