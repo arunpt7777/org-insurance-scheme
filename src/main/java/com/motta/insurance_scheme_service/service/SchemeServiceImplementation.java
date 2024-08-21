@@ -3,7 +3,6 @@ package com.motta.insurance_scheme_service.service;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static com.motta.insurance_scheme_service.util.SchemeConstants.*;
 import com.motta.insurance_scheme_service.exception.InvalidDateRangeException;
@@ -61,9 +60,7 @@ public class SchemeServiceImplementation implements SchemeService {
 			throw new SchemeAlreadyExistsException(EXCEPTION_MESSAGE_SCHEME_NOT_FOUND);
 		}
 
-		// Convert SchemeDTO into User JPA Entity
-		Scheme newScheme = new Scheme();
-		BeanUtils.copyProperties(schemeDTO, newScheme);
+		Scheme newScheme = schemeMapper.mapToScheme(schemeDTO);
 		Scheme savedScheme = repository.save(newScheme);
 		logger.info(LOG_MESSAGE_SCHEME_PERSISTED, schemeDTO.getId());
 
@@ -166,11 +163,10 @@ public class SchemeServiceImplementation implements SchemeService {
 		AssociationDTO[] associationDTOS = response.getBody();
 
 		if (associationDTOS == null) {
-			throw new InvalidSchemeException("Associations not found");
+			throw new InvalidSchemeException(EXCEPTION_MESSAGE_SCHEME_NOT_FOUND);
 		}
 		return  Arrays.stream(associationDTOS).toList();
 	}
-
 
 	@Override
 	public double calculateCommission(Integer schemeId) {
