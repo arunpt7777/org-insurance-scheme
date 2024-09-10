@@ -1,10 +1,9 @@
 package com.motta.insurance_scheme_service.util;
 
 public class SchemeConstants {
-    public static final String LOG_MESSAGE_SCHEME_NOT_FOUND = "Scheme id not found. Please enter different id";
+
     public static final String LOG_MESSAGE_SCHEME_PERSISTED = "Scheme id = {} persisted";
     public static final String LOG_MESSAGE_SCHEME_UPDATE_FAILED = "Updating scheme id = {} has failed.";
-    public static final String LOG_FETCHING_ASSOCIATIONS_FAILED = "Failed fetching associations for scheme Id.";
 
     public static final String EXCEPTION_MESSAGE_SCHEME_NOT_FOUND = "Scheme id = {} already Exists!";
     public static final String EXCEPTION_MESSAGE_INVALID_FROM_DATE = "From Date should be less than To Date";
@@ -16,9 +15,9 @@ public class SchemeConstants {
     public static final String EXCEPTION_MESSAGE_SCHEME_AMOUNT_IS_MANDATORY = "Scheme Amount is mandatory";
     public static final String EXCEPTION_MESSAGE_SHARE_IS_MANDATORY = "Share  is mandatory";
     public static final String EXCEPTION_MESSAGE_COMMISSION_IS_MANDATORY = "Commission  is mandatory";
-    public static final String EXCEPTION_MESSAGE_ASSOCIATIONS_NOT_FOUND = "Associations not found";
+    public static final String EXCEPTION_EMPLOYEE_SERVICE_DOWN = "Employee Service is down. Please contact your admin";
 
     public static final String URL_GET_ASSOCIATIONS_BY_SCHEME_ID = "http://localhost:8900/getassociationsbyschemeid/";
-
+    public static final String URL_CHECK_IF_EMPLOYEE_SERVICE_IS_UP = "http://localhost:8080/employeeservicecheck";
 
 }

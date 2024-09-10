@@ -3,6 +3,7 @@ package com.motta.insurance_scheme_service.controller;
 import java.util.List;
 
 import com.motta.insurance_scheme_service.model.SchemeDTO;
+import com.motta.insurance_scheme_service.model.ServiceCheckDTO;
 import com.motta.insurance_scheme_service.service.SchemeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -23,6 +24,9 @@ public class SchemeController {
 
 	@Autowired
 	private SchemeService schemeService;
+
+
+
 
 	// create Scheme REST API
 	@PostMapping("/schemes")
@@ -52,6 +56,7 @@ public class SchemeController {
 		List<SchemeDTO> schemes = schemeService.retrieveAllSchemes();
 		return new ResponseEntity<>(schemes, HttpStatus.OK);
 	}
+
 
 	// Update Scheme REST API
 	@PutMapping("/schemes/{id}")

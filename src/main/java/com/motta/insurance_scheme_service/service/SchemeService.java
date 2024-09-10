@@ -23,4 +23,5 @@ public interface SchemeService {
 	double calculateCommission(Integer schemeId);
 
 	double calculateShare(Integer schemeId);
+
 }

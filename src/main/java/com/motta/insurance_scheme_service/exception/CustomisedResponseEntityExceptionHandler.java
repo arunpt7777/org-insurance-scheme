@@ -59,5 +59,13 @@ public class CustomisedResponseEntityExceptionHandler extends ResponseEntityExce
 		return new ResponseEntity(errorDetails, HttpStatus.NOT_FOUND);
 	}
 
+	@ExceptionHandler(EmployeeServiceUnavailableException.class)
+	public final ResponseEntity<ErrorDetails> handleEmployeeServiceUnavailableException(Exception ex, WebRequest request)
+			throws Exception {
+		ErrorDetails errorDetails = new ErrorDetails(LocalDateTime.now(), ex.getMessage(),
+				request.getDescription(false));
+		return new ResponseEntity(errorDetails, HttpStatus.NOT_FOUND);
+	}
+
 
 }

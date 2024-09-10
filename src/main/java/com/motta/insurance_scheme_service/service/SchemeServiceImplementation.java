@@ -5,10 +5,16 @@ import java.util.Arrays;
 import java.util.List;
 
 import static com.motta.insurance_scheme_service.util.SchemeConstants.*;
+
+import com.motta.insurance_scheme_service.exception.EmployeeServiceUnavailableException;
 import com.motta.insurance_scheme_service.exception.InvalidDateRangeException;
 import com.motta.insurance_scheme_service.exception.InvalidSchemeException;
 import com.motta.insurance_scheme_service.model.AssociationDTO;
+import com.motta.insurance_scheme_service.model.ServiceCheckDTO;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -31,6 +37,7 @@ import org.springframework.web.client.RestTemplate;
 
 @Service
 @Slf4j
+@Aspect
 public class SchemeServiceImplementation implements SchemeService {
 
 	private static final Logger logger = LoggerFactory.getLogger(SchemeServiceImplementation.class);
@@ -65,16 +72,16 @@ public class SchemeServiceImplementation implements SchemeService {
 		logger.info(LOG_MESSAGE_SCHEME_PERSISTED, schemeDTO.getId());
 
 		// Convert Scheme JPA entity to SchemeDTO
-        return schemeMapper.mapToSchemeDTO(savedScheme);
+		return schemeMapper.mapToSchemeDTO(savedScheme);
 	}
 
 	@Override
 	public SchemeDTO retrieveSchemeById(Integer id) {
 		Scheme scheme = repository.findById(id).orElse(null);
-        assert scheme != null;
+		assert scheme != null;
 		SchemeDTO schemeDTO = new SchemeDTO();
 		BeanUtils.copyProperties(scheme, schemeDTO);
-        return schemeDTO;
+		return schemeDTO;
 	}
 
 	@Override
@@ -122,21 +129,21 @@ public class SchemeServiceImplementation implements SchemeService {
 			throw new InvalidSchemeException(EXCEPTION_MESSAGE_SCHEME_ID_IS_MANDATORY);
 		}
 
-		if (schemeDTO.getName()==null) {
+		if (schemeDTO.getName() == null) {
 			throw new InvalidSchemeException(EXCEPTION_MESSAGE_SCHEME_NAME_IS_MANDATORY);
 		}
 
-		if (schemeDTO.getId()< initialValueOfPrimaryKey) {
-			throw new InvalidSchemeException(EXCEPTION_MESSAGE_SCHEME_ID_LESS_THAN_INITIAL_VALUE +  initialValueOfPrimaryKey);
+		if (schemeDTO.getId() < initialValueOfPrimaryKey) {
+			throw new InvalidSchemeException(EXCEPTION_MESSAGE_SCHEME_ID_LESS_THAN_INITIAL_VALUE + initialValueOfPrimaryKey);
 		}
 
-		if (schemeDTO.getValidToDate()==null) {
+		if (schemeDTO.getValidToDate() == null) {
 			throw new InvalidSchemeException(EXCEPTION_MESSAGE_TO_DATE_IS_MANDATORY);
 		}
-		if (schemeDTO.getSchemeType()==null) {
+		if (schemeDTO.getSchemeType() == null) {
 			throw new InvalidSchemeException(EXCEPTION_MESSAGE_SCHEME_TYPE_IS_MANDATORY);
 		}
-		if (schemeDTO.getSchemeAmount()==0.0) {
+		if (schemeDTO.getSchemeAmount() == 0.0) {
 			throw new InvalidSchemeException(EXCEPTION_MESSAGE_SCHEME_AMOUNT_IS_MANDATORY);
 		}
 
@@ -148,13 +155,13 @@ public class SchemeServiceImplementation implements SchemeService {
 		}
 	}
 
-	public List<AssociationDTO> fetchAssociations (int schemeId) {
+	public List<AssociationDTO> fetchAssociations(int schemeId) {
 		HttpHeaders headers = new HttpHeaders();
 		HttpEntity<String> entity = new HttpEntity<String>(headers);
 
 		// Check if scheme exists or not
 		SchemeDTO schemeDTO = retrieveSchemeById(schemeId);
-		if(schemeDTO == null) {
+		if (schemeDTO == null) {
 			throw new InvalidSchemeException(EXCEPTION_MESSAGE_SCHEME_NOT_FOUND);
 		}
 
@@ -165,7 +172,7 @@ public class SchemeServiceImplementation implements SchemeService {
 		if (associationDTOS == null) {
 			throw new InvalidSchemeException(EXCEPTION_MESSAGE_SCHEME_NOT_FOUND);
 		}
-		return  Arrays.stream(associationDTOS).toList();
+		return Arrays.stream(associationDTOS).toList();
 	}
 
 	@Override
@@ -175,9 +182,9 @@ public class SchemeServiceImplementation implements SchemeService {
 		List<AssociationDTO> associationDTOS = fetchAssociations(schemeId);
 		List<Double> commissionList = new ArrayList<>();
 
-		for (AssociationDTO associationDTO: associationDTOS) {
+		for (AssociationDTO associationDTO : associationDTOS) {
 			SchemeDTO associatedSchemeDTO = retrieveSchemeById(associationDTO.getSchemeId());
-			if(associatedSchemeDTO == null) {
+			if (associatedSchemeDTO == null) {
 				throw new InvalidSchemeException(EXCEPTION_MESSAGE_SCHEME_NOT_FOUND + associationDTO.getSchemeId());
 			}
 			commissionList.add(associatedSchemeDTO.getCommission());
@@ -194,14 +201,30 @@ public class SchemeServiceImplementation implements SchemeService {
 		List<AssociationDTO> associationDTOS = fetchAssociations(schemeId);
 		List<Double> shareList = new ArrayList<>();
 
-		for (AssociationDTO associationDTO: associationDTOS) {
+		for (AssociationDTO associationDTO : associationDTOS) {
 			SchemeDTO associatedSchemeDTO = retrieveSchemeById(associationDTO.getSchemeId());
-			if(associatedSchemeDTO == null) {
+			if (associatedSchemeDTO == null) {
 				throw new InvalidSchemeException(EXCEPTION_MESSAGE_SCHEME_NOT_FOUND + associationDTO.getSchemeId());
 			}
 			shareList.add(associatedSchemeDTO.getShare());
 		}
 		totalShare = shareList.stream().min(Double::compare).orElse(0.0);
-		return  totalShare;
+		return totalShare;
 	}
+
+	@PostConstruct
+    public void checkOnEmployeeService() {
+		HttpHeaders headers = new HttpHeaders();
+		HttpEntity<String> entity = new HttpEntity<String>(headers);
+
+		// Check if Employee Service is up or not
+		ResponseEntity<ServiceCheckDTO[]> response = restTemplate.exchange(URL_CHECK_IF_EMPLOYEE_SERVICE_IS_UP, HttpMethod.GET, entity, ServiceCheckDTO[].class);
+		ServiceCheckDTO[] services = response.getBody();
+
+		if (services == null) {
+			throw new EmployeeServiceUnavailableException(EXCEPTION_EMPLOYEE_SERVICE_DOWN);
+		}
+		
+	}
+
 }
